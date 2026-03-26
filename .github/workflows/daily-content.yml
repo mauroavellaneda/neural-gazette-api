@@ -1,0 +1,68 @@
+name: Daily Content Pipeline
+
+on:
+  schedule:
+    # Generate articles at 08:00 UTC
+    - cron: "0 8 * * *"
+    # Review articles at 13:30 UTC
+    - cron: "30 13 * * *"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Which action to run"
+        required: true
+        type: choice
+        options:
+          - generate
+          - review
+
+jobs:
+  wake-up:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wake up Render service
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            https://neural-gazette-api.onrender.com/docs
+          echo " — ping sent, waiting for cold start..."
+          sleep 60
+
+  generate:
+    needs: wake-up
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 8 * * *' || github.event.inputs.action == 'generate'
+    steps:
+      - name: Generate daily articles
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            https://neural-gazette-api.onrender.com/api/generate/daily \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "Status: $http_code"
+          echo "Response: $body"
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Generation failed with status $http_code"
+            exit 1
+          fi
+
+  review:
+    needs: wake-up
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '30 13 * * *' || github.event.inputs.action == 'review'
+    steps:
+      - name: Review unreviewed articles
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            https://neural-gazette-api.onrender.com/api/generate/review \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "Status: $http_code"
+          echo "Response: $body"
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Review failed with status $http_code"
+            exit 1
+          fi
