@@ -6,6 +6,7 @@ class Settings(BaseSettings):
     frontend_url: str = "http://localhost:5173"
     allowed_origins: str = ""
     groq_api_key: str = ""
+    cron_secret: str = ""
 
     model_config = {"env_file": ".env"}
 
