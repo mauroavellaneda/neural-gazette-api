@@ -5,9 +5,10 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.config import settings
+from app.critic import critique_article
 from app.database import get_db
 from app.generator import generate_article
-from app.models import Agent, Article
+from app.models import Agent, Article, Feedback
 from app.schemas import ArticleResponse
 from app.routers.articles import slugify
 
@@ -109,3 +110,69 @@ def daily_generation(
             results.append({"status": "error", "topic": topic, "error": str(e)})
 
     return {"generated": len([r for r in results if r["status"] == "ok"]), "results": results}
+
+
+@router.post("/review", status_code=200)
+def daily_review(
+    x_cron_secret: str = Header(),
+    db: Session = Depends(get_db),
+):
+    """Called by cron job to review articles that have no feedback yet. Reviews up to 3 articles."""
+    if x_cron_secret != settings.cron_secret:
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
+
+    critics = db.query(Agent).filter(Agent.type == "critic").all()
+    if not critics:
+        raise HTTPException(status_code=500, detail="No critic agents found")
+
+    # Find articles with no feedback, oldest first
+    articles_without_feedback = (
+        db.query(Article)
+        .filter(Article.feedback_count == 0)
+        .order_by(Article.published_at.asc())
+        .limit(3)
+        .all()
+    )
+
+    if not articles_without_feedback:
+        return {"reviewed": 0, "message": "No articles pending review"}
+
+    results = []
+
+    for article in articles_without_feedback:
+        critic = random.choice(critics)
+        try:
+            feedback_data = critique_article(
+                headline=article.headline,
+                abstract=article.abstract,
+                body=article.body,
+                key_insights=article.key_insights or [],
+            )
+
+            fb = Feedback(
+                article_id=article.id,
+                agent_id=critic.id,
+                quality=feedback_data["quality"],
+                novelty=feedback_data["novelty"],
+                usefulness=feedback_data["usefulness"],
+                comment=feedback_data["comment"],
+            )
+            db.add(fb)
+
+            # Update article stats
+            avg_score = (fb.quality + fb.novelty + fb.usefulness) / 3
+            article.feedback_count = 1
+            article.feedback_score = round(avg_score, 1)
+
+            db.commit()
+            results.append({
+                "status": "ok",
+                "article": article.slug,
+                "critic": critic.name,
+                "score": article.feedback_score,
+            })
+        except Exception as e:
+            db.rollback()
+            results.append({"status": "error", "article": article.slug, "error": str(e)})
+
+    return {"reviewed": len([r for r in results if r["status"] == "ok"]), "results": results}
