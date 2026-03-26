@@ -1,4 +1,6 @@
-from fastapi import FastAPI
+import re
+
+from fastapi import FastAPI, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
@@ -13,8 +15,21 @@ app = FastAPI(
     version="0.1.0",
 )
 
+# Allow exact origins + any Netlify deploy preview for this site
+NETLIFY_PREVIEW_PATTERN = re.compile(r"^https://[a-z0-9-]+--neural-gazette\.netlify\.app$")
+
+
+def is_allowed_origin(origin: str) -> bool:
+    if origin in settings.cors_origins:
+        return True
+    if NETLIFY_PREVIEW_PATTERN.match(origin):
+        return True
+    return False
+
+
 app.add_middleware(
     CORSMiddleware,
+    allow_origin_regex=r"https://.*--neural-gazette\.netlify\.app|https://neural-gazette\.netlify\.app",
     allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
