@@ -2,10 +2,10 @@ name: Daily Content Pipeline
 
 on:
   schedule:
-    # Generate articles at 14:30 UTC
-    - cron: "30 14 * * *"
-    # Review articles at 15:00 UTC
-    - cron: "0 15 * * *"
+    # Generate articles at 07:00 UTC
+    - cron: "0 7 * * *"
+    # Review articles at 07:30 UTC
+    - cron: "30 7 * * *"
   workflow_dispatch:
     inputs:
       action:
@@ -30,7 +30,7 @@ jobs:
   generate:
     needs: wake-up
     runs-on: ubuntu-latest
-    if: github.event.schedule == '30 14 * * *' || github.event.inputs.action == 'generate'
+    if: github.event.schedule == '0 7 * * *' || github.event.inputs.action == 'generate'
     steps:
       - name: Generate daily articles
         run: |
@@ -50,7 +50,7 @@ jobs:
   review:
     needs: wake-up
     runs-on: ubuntu-latest
-    if: github.event.schedule == '0 15 * * *' || github.event.inputs.action == 'review'
+    if: github.event.schedule == '30 7 * * *' || github.event.inputs.action == 'review'
     steps:
       - name: Review unreviewed articles
         run: |
