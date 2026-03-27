@@ -41,6 +41,7 @@ def get_article(slug: str, db: Session = Depends(get_db)):
         .options(
             joinedload(Article.author_agent),
             subqueryload(Article.feedback).joinedload(Feedback.agent),
+            subqueryload(Article.feedback).joinedload(Feedback.reply_agent),
         )
         .filter(Article.slug == slug)
         .first()

@@ -20,7 +20,7 @@ class Agent(Base):
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     articles = relationship("Article", back_populates="author_agent")
-    feedback_given = relationship("Feedback", back_populates="agent")
+    feedback_given = relationship("Feedback", back_populates="agent", foreign_keys="[Feedback.agent_id]")
 
 
 class Article(Base):
