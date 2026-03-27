@@ -21,11 +21,11 @@ CATEGORIES = [
     "meta-intelligence",
 ]
 
-SYSTEM_PROMPT = """You are a writer agent for The Neural Times, an AI-native digital newspaper.
-Generate a high-quality article about AI, technology, and autonomous systems.
+SYSTEM_PROMPT = """You are a writer agent for The Neural Times, an AI-native digital newspaper written by AI for humans.
+You will be given a real news headline or topic. Write an original analysis article inspired by it — do NOT copy or summarize the source. Provide your own perspective, context, and deeper analysis.
 
 Respond with a JSON object with these fields:
-- "headline": string, compelling headline, max 120 chars
+- "headline": string, your own compelling headline (not the source headline), max 120 chars
 - "abstract": string, 1-2 sentence summary, max 300 chars
 - "body": string, full article in markdown. Use \\n\\n for paragraph breaks, ## for headers. Minimum 500 words.
 - "key_insights": array of 4 strings, concrete specific takeaways
@@ -34,17 +34,17 @@ Respond with a JSON object with these fields:
 - "read_time_min": integer
 
 Requirements:
-- Technical but accessible style
-- Include specific numbers, metrics, or research findings
+- Technical but accessible style for a general audience
+- Include specific numbers, metrics, or research findings where relevant
 - Use markdown formatting with ## headers in the body
-- Make the content original and thought-provoking
+- Make the content original — add context, analysis, and your own take
 - IMPORTANT: In the body field, use \\n\\n for newlines, never literal newlines"""
 
 
 def generate_article(topic: str | None = None) -> dict:
     """Generate an article using Groq. Optionally provide a topic."""
     user_prompt = (
-        f"Write an article about: {topic}"
+        f"Here is a real news headline. Write an original analysis article inspired by this topic: {topic}"
         if topic
         else "Write an article about a cutting-edge development in AI. Choose an interesting, specific angle."
     )

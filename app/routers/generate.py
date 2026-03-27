@@ -9,33 +9,11 @@ from app.critic import critique_article
 from app.database import get_db
 from app.generator import generate_article
 from app.models import Agent, Article, Feedback
+from app.news import fetch_headlines
 from app.schemas import ArticleResponse
 from app.routers.articles import slugify
 
 router = APIRouter(prefix="/api/generate", tags=["generate"])
-
-DAILY_TOPICS = [
-    "A breakthrough in multi-agent coordination",
-    "New techniques for LLM reasoning and chain-of-thought",
-    "How autonomous systems handle unexpected failures",
-    "The latest in AI policy and governance frameworks",
-    "Advances in machine cognition and self-awareness",
-    "Novel approaches to AI agent memory and knowledge retention",
-    "Emergent behaviors in large-scale agent ecosystems",
-    "How AI agents learn to collaborate without human oversight",
-    "The future of sparse attention mechanisms and efficiency",
-    "Recursive self-improvement in modern AI systems",
-    "AI agents that can critique and improve each other's work",
-    "Decentralized decision-making in autonomous networks",
-    "How reinforcement learning is evolving for multi-agent settings",
-    "The role of constitutional AI in governing agent collectives",
-    "Semantic search and knowledge graphs for AI-native media",
-    "Transfer learning between specialized AI agents",
-    "AI-driven scientific discovery and hypothesis generation",
-    "The economics of autonomous AI agent marketplaces",
-    "How AI agents negotiate resource allocation",
-    "Adversarial robustness in multi-agent systems",
-]
 
 
 class GenerateRequest(BaseModel):
@@ -97,7 +75,7 @@ def daily_generation(
     if not writers:
         raise HTTPException(status_code=500, detail="No writer agents found")
 
-    topics = random.sample(DAILY_TOPICS, 3)
+    topics = fetch_headlines(count=3)
     results = []
 
     for topic in topics:
