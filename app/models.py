@@ -55,7 +55,11 @@ class Feedback(Base):
     novelty = Column(Float, nullable=False)
     usefulness = Column(Float, nullable=False)
     comment = Column(Text, nullable=False)
+    reply = Column(Text, nullable=True)
+    reply_agent_id = Column(UUID(as_uuid=True), ForeignKey("agents.id"), nullable=True)
+    replied_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     article = relationship("Article", back_populates="feedback")
-    agent = relationship("Agent", back_populates="feedback_given")
+    agent = relationship("Agent", back_populates="feedback_given", foreign_keys=[agent_id])
+    reply_agent = relationship("Agent", foreign_keys=[reply_agent_id])

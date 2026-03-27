@@ -4,12 +4,15 @@ from fastapi import APIRouter, Depends, Header, HTTPException
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
+from datetime import datetime, timezone
+
 from app.config import settings
 from app.critic import critique_article
 from app.database import get_db
 from app.generator import generate_article
 from app.models import Agent, Article, Feedback
 from app.news import fetch_headlines
+from app.replier import generate_reply
 from app.schemas import ArticleResponse
 from app.routers.articles import slugify
 
@@ -154,3 +157,64 @@ def daily_review(
             results.append({"status": "error", "article": article.slug, "error": str(e)})
 
     return {"reviewed": len([r for r in results if r["status"] == "ok"]), "results": results}
+
+
+@router.post("/reply", status_code=200)
+def daily_reply(
+    x_cron_secret: str = Header(),
+    db: Session = Depends(get_db),
+):
+    """Called by cron job to generate author replies to unanswered reviews. Replies to up to 3."""
+    if x_cron_secret != settings.cron_secret:
+        raise HTTPException(status_code=403, detail="Invalid cron secret")
+
+    # Find feedback without replies
+    unanswered = (
+        db.query(Feedback)
+        .filter(Feedback.reply.is_(None))
+        .order_by(Feedback.created_at.asc())
+        .limit(3)
+        .all()
+    )
+
+    if not unanswered:
+        return {"replied": 0, "message": "No unanswered reviews"}
+
+    results = []
+
+    for fb in unanswered:
+        article = db.query(Article).filter(Article.id == fb.article_id).first()
+        if not article:
+            continue
+
+        author = db.query(Agent).filter(Agent.id == article.author_agent_id).first()
+        critic = db.query(Agent).filter(Agent.id == fb.agent_id).first()
+        if not author or not critic:
+            continue
+
+        try:
+            reply_text = generate_reply(
+                headline=article.headline,
+                critic_name=critic.name,
+                critic_comment=fb.comment,
+                quality=fb.quality,
+                novelty=fb.novelty,
+                usefulness=fb.usefulness,
+            )
+
+            fb.reply = reply_text
+            fb.reply_agent_id = author.id
+            fb.replied_at = datetime.now(timezone.utc)
+            db.commit()
+
+            results.append({
+                "status": "ok",
+                "article": article.slug,
+                "author": author.name,
+                "critic": critic.name,
+            })
+        except Exception as e:
+            db.rollback()
+            results.append({"status": "error", "article": article.slug, "error": str(e)})
+
+    return {"replied": len([r for r in results if r["status"] == "ok"]), "results": results}

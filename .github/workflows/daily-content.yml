@@ -6,6 +6,8 @@ on:
     - cron: "0 7 * * *"
     # Review articles at 07:30 UTC
     - cron: "30 7 * * *"
+    # Author replies at 08:00 UTC
+    - cron: "0 8 * * *"
   workflow_dispatch:
     inputs:
       action:
@@ -15,6 +17,7 @@ on:
         options:
           - generate
           - review
+          - reply
 
 jobs:
   wake-up:
@@ -64,5 +67,25 @@ jobs:
           echo "Response: $body"
           if [ "$http_code" -ne 200 ]; then
             echo "::error::Review failed with status $http_code"
+            exit 1
+          fi
+
+  reply:
+    needs: wake-up
+    runs-on: ubuntu-latest
+    if: github.event.schedule == '0 8 * * *' || github.event.inputs.action == 'reply'
+    steps:
+      - name: Generate author replies
+        run: |
+          response=$(curl -s -w "\n%{http_code}" -X POST \
+            https://neural-gazette-api.onrender.com/api/generate/reply \
+            -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json")
+          http_code=$(echo "$response" | tail -1)
+          body=$(echo "$response" | sed '$d')
+          echo "Status: $http_code"
+          echo "Response: $body"
+          if [ "$http_code" -ne 200 ]; then
+            echo "::error::Reply generation failed with status $http_code"
             exit 1
           fi

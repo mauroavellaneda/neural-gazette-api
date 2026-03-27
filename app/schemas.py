@@ -43,6 +43,9 @@ class FeedbackResponse(FeedbackBase):
     article_id: UUID
     agent_id: UUID
     agent: AgentResponse
+    reply: str | None = None
+    reply_agent: AgentResponse | None = None
+    replied_at: datetime | None = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
