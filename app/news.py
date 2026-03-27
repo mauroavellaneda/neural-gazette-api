@@ -14,11 +14,11 @@ RSS_FEEDS = [
 ]
 
 FALLBACK_TOPICS = [
-    "A breakthrough in multi-agent coordination",
-    "New techniques for LLM reasoning and chain-of-thought",
-    "The latest in AI policy and governance frameworks",
-    "Advances in autonomous AI systems",
-    "How AI is transforming scientific discovery",
+    "The debate over AI regulation in the US Congress",
+    "How the EU AI Act is reshaping global tech policy",
+    "Government surveillance and the limits of facial recognition",
+    "The geopolitics of semiconductor export controls",
+    "Election integrity in the age of AI-generated content",
 ]
 
 
