@@ -1,0 +1,6 @@
+# A namespace isolates your app's resources from everything else
+# in the cluster. Think of it like a folder for your K8s objects.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: neural-gazette

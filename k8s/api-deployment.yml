@@ -1,0 +1,60 @@
+# A Deployment tells K8s: "run N copies of this container and keep them alive."
+# If a pod crashes, K8s automatically restarts it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gazette-api
+  namespace: neural-gazette
+  labels:
+    app: gazette-api
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gazette-api
+  template:
+    metadata:
+      labels:
+        app: gazette-api
+    spec:
+      containers:
+        - name: api
+          image: neural-gazette-api:latest
+          # Use local images, don't try to pull from Docker Hub
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: gazette-secrets
+                  key: DATABASE_URL
+            - name: GROQ_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gazette-secrets
+                  key: GROQ_API_KEY
+            - name: CRON_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: gazette-secrets
+                  key: CRON_SECRET
+            - name: FRONTEND_URL
+              value: "http://localhost"
+            - name: ALLOWED_ORIGINS
+              value: "http://localhost"
+          # Health check: K8s pings this endpoint to know if the pod is alive
+          readinessProbe:
+            httpGet:
+              path: /docs
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"

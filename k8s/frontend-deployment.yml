@@ -1,0 +1,36 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gazette-frontend
+  namespace: neural-gazette
+  labels:
+    app: gazette-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gazette-frontend
+  template:
+    metadata:
+      labels:
+        app: gazette-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: neural-gazette:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 80
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          resources:
+            requests:
+              memory: "32Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

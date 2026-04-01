@@ -1,0 +1,14 @@
+# A Service gives your pods a stable internal address.
+# Pods come and go (they get new IPs each time), but the Service
+# stays at the same address and routes traffic to healthy pods.
+apiVersion: v1
+kind: Service
+metadata:
+  name: gazette-api
+  namespace: neural-gazette
+spec:
+  selector:
+    app: gazette-api
+  ports:
+    - port: 8000
+      targetPort: 8000
